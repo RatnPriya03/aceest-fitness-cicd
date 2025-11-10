@@ -1,8 +1,11 @@
 pipeline {
-    agent any 
-
-    // Define environment variables
-    // Define environment variables
+    agent {
+        docker {
+            image 'python:3.9-slim' 
+            // Ensures the workspace is mounted correctly
+            args '-u root:root'
+        }
+    }
     environment {
         // --- Custom Variables ---
         DOCKER_HUB_ID = 'RatnPriya03' 
@@ -25,7 +28,7 @@ pipeline {
 
         stage('Run Unit Tests (Pytest)') {
             steps {
-                sh 'pip install -r requirements.txt' 
+                sh 'pip install -r requirements.txt' // Keep this line as dependencies are not in the base image
                 sh 'pytest' // Execute your Pytest suite
             }
         }
