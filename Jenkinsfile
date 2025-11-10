@@ -1,5 +1,5 @@
 pipeline {
-    // Executes on the main Jenkins agent for SCM checkout, then hands off to Docker agents
+    // Agent is set to 'any' to use the default Jenkins executor.
     agent any 
 
     // Define environment variables
@@ -7,11 +7,10 @@ pipeline {
         // --- Custom Variables ---
         DOCKER_HUB_ID = 'RatnPriya03' 
         IMAGE_NAME = 'aceest-fitness'
-        // FIX: Use GString interpolation (double quotes) for dynamic variable creation
+        // FIX: Using GString interpolation (double quotes) for dynamic variable creation
         IMAGE_TAG = "1.0.${new Date().format('yyyyMMdd.HHmmss')}"
         
         // --- Jenkins Credentials/Tools IDs ---
-        // MUST match the IDs you created in Jenkins -> Manage Credentials
         DOCKER_CREDENTIAL_ID = 'docker-hub-cred-id' 
         
         // --- SonarQube Configuration ---
@@ -23,37 +22,26 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                // SCM checkout happens automatically at the start, but we can explicitly call it here too.
                 checkout scm
             }
         }
 
-        stage('Run Unit Tests (Pytest)') {
-            // FIX: Use a stage-specific Docker agent to ensure Python/pip is available
-            agent {
-                docker {
-                    image 'python:3.9-slim' 
-                }
-            }
+        stage('Run Unit Tests (Pytest) in Docker') {
             steps {
-                echo 'Installing Python dependencies...'
-                sh 'pip install -r requirements.txt' 
-                echo 'Running Pytest...'
-                sh 'pytest' 
+                echo 'Building temporary image to run tests...'
+                // Build a temporary image based on your Dockerfile/app for testing
+                sh "docker build -t ${IMAGE_NAME}_test:${IMAGE_TAG} ."
+                
+                echo 'Running Pytest inside a temporary Docker container...'
+                // Run the pytest tests inside the built image
+                sh "docker run --rm ${IMAGE_NAME}_test:${IMAGE_TAG} /bin/sh -c 'pip install pytest && pytest'"
             }
         }
 
         stage('SonarQube Scan') {
-            // Use the same Python agent environment for a clean scan
-            agent {
-                docker {
-                    image 'python:3.9-slim' 
-                }
-            }
             steps {
                 echo 'Starting SonarQube analysis...'
                 withSonarQubeEnv(SONAR_SERVER_NAME) { 
-                    // Point to the SonarScanner tool installed globally in Jenkins
                     tool name: SONAR_TOOL_NAME, type: 'hudson.plugins.sonar.SonarRunnerInstallation'
                     
                     // Execute the scan
@@ -77,7 +65,7 @@ pipeline {
         stage('Build and Push Docker Image') {
             steps {
                 script {
-                    echo 'Building and tagging Docker image...'
+                    echo 'Building final Docker image...'
                     
                     // Use the Docker Hub credential 
                     withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIAL_ID}", passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USER')]) {
