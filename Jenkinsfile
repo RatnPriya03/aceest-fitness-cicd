@@ -2,12 +2,13 @@ pipeline {
     agent any 
 
     // Define environment variables
+    // Define environment variables
     environment {
         // --- Custom Variables ---
         DOCKER_HUB_ID = 'RatnPriya03' 
         IMAGE_NAME = 'aceest-fitness'
-        // Create a unique tag based on the build timestamp
-        IMAGE_TAG = '1.0.' + new Date().format('yyyyMMdd.HHmmss')
+        // FIX: Wrap the entire dynamic expression in double quotes
+        IMAGE_TAG = "1.0.${new Date().format('yyyyMMdd.HHmmss')}"
         
         // --- Jenkins Credentials/Tools IDs ---
         DOCKER_CREDENTIAL_ID = 'docker-hub-cred-id' // ID of your Docker Hub Credential
@@ -15,7 +16,6 @@ pipeline {
         SONAR_TOOL_NAME = 'SonarScanner' // Name from Global Tool Configuration
         SONAR_SERVER_NAME = 'SonarQube' // Name from Configure System
     }
-
     stages {
         stage('Checkout Code') {
             steps {
